@@ -1,6 +1,8 @@
 # MVSep-MDX23 Colab Fork v2.2.2
 Adaptation of MVSep-MDX23 algorithm for Colab, with few tweaks:
 
+v2.3 is now available: https://github.com/jarredou/MVSEP-MDX23-Colab_v2/
+
 **v2.2.2**
 * D1581 demo model replaced by new InstVocHQ MDXv3 model.
 
