@@ -2,10 +2,8 @@
 
 if __name__ == '__main__':
     import os
-     
-    gpu_use = "0"
 
-    print('GPU use: {}'.format(gpu_use))
+    gpu_use = "0"
     os.environ["CUDA_VISIBLE_DEVICES"] = "{}".format(gpu_use)
 import warnings
 warnings.filterwarnings("ignore")
@@ -35,7 +33,7 @@ import warnings
 from modules.tfc_tdf_v3 import TFC_TDF_net, STFT
 from scipy.signal import resample_poly
 from modules.segm_models import Segm_Models_Net
-
+from contextlib import redirect_stdout
 
 class Conv_TDF_net_trim_model(nn.Module):
     def __init__(self, device, target_name, L, n_fft, hop=1024):
@@ -500,7 +498,7 @@ class EnsembleDemucsMDXMusicSeparationModel:
         
         separated_music_arrays = {}
         output_sample_rates = {}
-        #print(mixed_sound_array.T.shape)
+        # print(mixed_sound_array.T.shape)
         #audio = np.expand_dims(mixed_sound_array.T, axis=0)
         audio = torch.from_numpy(mixed_sound_array.T).type('torch.FloatTensor').to(self.device)
 
@@ -509,8 +507,8 @@ class EnsembleDemucsMDXMusicSeparationModel:
         shifts = 0
         overlap = overlap_demucs
         """
-        # Get Demics vocal only
-        print('Processing vocals with Demucs_ft...')
+        # Get Demucs vocal only
+        print('Processing vocals with Demucs_FT...')
         model = self.model_vocals_only
         shifts = 0
         overlap = overlap_demucs
@@ -528,7 +526,6 @@ class EnsembleDemucsMDXMusicSeparationModel:
         # sf.write("/content/drive/MyDrive/output/vocals4.wav", vocals4.T, 44100)
         # sf.write("instrum4.wav", instrum4.T, 44100)
 
-        
         print('Processing vocals with MDXv3 InstVocHQ model...')
         sources3 = demix_full_mdx23c(mixed_sound_array.T, self.device, self.model_mdxv3)
         vocals3 = match_array_shapes(sources3, mixed_sound_array.T)
@@ -699,6 +696,7 @@ def predict_with_model(options):
         if not os.path.isfile(input_audio):
             print('Error. No such file: {}. Please check path!'.format(input_audio))
             return
+
     output_folder = options['output_folder']
     if not os.path.isdir(output_folder):
         os.mkdir(output_folder)
@@ -771,8 +769,6 @@ def match_array_shapes(array_1:np.ndarray, array_2:np.ndarray):
     return array_1
 
 if __name__ == '__main__':
-    start_time = time()
-    print("started!\n")
     m = argparse.ArgumentParser()
     m.add_argument("--input_audio", "-i", nargs='+', type=str, help="Input audio location. You can provide multiple files at once", required=True)
     m.add_argument("--output_folder", "-r", type=str, help="Output audio folder", required=True)
@@ -789,30 +785,43 @@ if __name__ == '__main__':
     m.add_argument("--BigShifts", type=int, help="Managing MDX 'BigShifts' trick value.", required=False, default=7)
     m.add_argument("--vocals_only", type=bool, help="Vocals + instrumental only", required=False, default=False)
     m.add_argument("--use_VOCFT", type=bool, help="use VOCFT in vocal ensemble", required=False, default=False)
-    m.add_argument("--output_format", type=str, help="Output audio folder", default="FLOAT")
-    
+    m.add_argument("--output_format", "-f", type=str, help="Output audio format", default="FLOAT")
+    m.add_argument("--quiet", "-q", action="store_true", help="Do not display most information and errors")
+
     options = m.parse_args().__dict__
-    print("Options: ")
 
-    print(f'BigShifts: {options["BigShifts"]}\n')
+    stdout = os.sys.stdout
+    if options['quiet']:
+        stdout = None
 
-    print(f'weight_InstVoc: {options["weight_InstVoc"]}')
-    print(f'weight_VitLarge: {options["weight_VitLarge"]}\n')
+        ort.set_default_logger_severity(4)
 
-    print(f'overlap_InstVoc: {options["overlap_InstVoc"]}')
-    print(f'overlap_VitLarge: {options["overlap_VitLarge"]}\n')
+    with redirect_stdout(stdout):
+        print('GPU use: {}'.format(gpu_use))
+
+        print("Options: ")
+
+        print(f'BigShifts: {options["BigShifts"]}\n')
+
+        print(f'weight_InstVoc: {options["weight_InstVoc"]}')
+        print(f'weight_VitLarge: {options["weight_VitLarge"]}\n')
+
+        print(f'overlap_InstVoc: {options["overlap_InstVoc"]}')
+        print(f'overlap_VitLarge: {options["overlap_VitLarge"]}\n')
     
-    print(f'use_VOCFT: {options["use_VOCFT"]}')
-    if options["use_VOCFT"] is True:
-        print(f'overlap_VOCFT: {options["overlap_VOCFT"]}')
-        print(f'weight_VOCFT: {options["weight_VOCFT"]}\n')
+        print(f'use_VOCFT: {options["use_VOCFT"]}')
+        if options["use_VOCFT"] is True:
+            print(f'overlap_VOCFT: {options["overlap_VOCFT"]}')
+            print(f'weight_VOCFT: {options["weight_VOCFT"]}\n')
 
-    print(f'vocals_only: {options["vocals_only"]}')
+        print(f'vocals_only: {options["vocals_only"]}')
     
-    if options["vocals_only"] is False:
-        print(f'overlap_demucs: {options["overlap_demucs"]}\n')
+        if options["vocals_only"] is False:
+            print(f'overlap_demucs: {options["overlap_demucs"]}\n')
 
-    print(f'output_format: {options["output_format"]}\n')
-    predict_with_model(options)
-    print('Time: {:.0f} sec'.format(time() - start_time))
-    
+        print(f'output_format: {options["output_format"]}\n')
+
+        start_time = time()
+        predict_with_model(options)
+
+        print('Time: {:.0f} sec'.format(time() - start_time))
