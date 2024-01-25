@@ -9,5 +9,5 @@ torch>=1.13.0
 pyyaml
 ml_collections
 pytorch_lightning
-samplerate
+samplerate==0.1.0
 segmentation_models_pytorch==0.3.3
