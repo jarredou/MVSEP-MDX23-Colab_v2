@@ -38,6 +38,8 @@ from modules.segm_models import Segm_Models_Net
 
 # DL4AD
 import music_tag # für lesen und schreiben von metadaten
+from datetime import datetime
+import dateutil.parser
 
 
 class Conv_TDF_net_trim_model(nn.Module):
@@ -714,8 +716,8 @@ def predict_with_model(options):
         audio, sr = librosa.load(input_audio, mono=False, sr=44100)
         metadata = music_tag.load_file(input_audio)
         print("metadata")
-        print(metadata)
-        print(type(metadata))
+        # print(metadata)
+        # print(type(metadata))
         print(metadata.tag_map)
         print("metadata.mfile",metadata.mfile)
         for tag in metadata.mfile:
@@ -723,7 +725,7 @@ def predict_with_model(options):
 
         metadata_dict = {}
         for possible_tag in metadata.tag_map:
-            if possible_tag in metadata:
+            try:
                 print(possible_tag + ": ", end="")
                 print(metadata[possible_tag])
                 if possible_tag.startswith("#"):
@@ -735,6 +737,21 @@ def predict_with_model(options):
                     # print("metadata.tag_map[possible_tag] -> ", metadata.tag_map[possible_tag][3])
                     # print("metadata.tag_map[possible_tag] -> ", "str" if "str" in str(metadata.tag_map[possible_tag][3]) else "int")
                     metadata_dict[possible_tag+"_type"] = "str" if "str" in str(metadata.tag_map[possible_tag][3]) else "int"
+            except:
+                print("problem with metadata, with year specifically, need to solve later")
+                if possible_tag == "year":
+                    print("year is supposed to be")
+                    # print(metadata.mfile["TXXX:TDAT"])
+                    # print(type(metadata.mfile["TXXX:TDAT"]))
+                    year_string = str(metadata.mfile["TXXX:TDAT"])
+                    # year_date = dateutil.parser.parse(year_string).date()
+                    year = str(dateutil.parser.parse(year_string).year)
+                    metadata_dict["year"] = year
+                    metadata_dict["year_type"] = "str"
+                    # metadata_dict["date"] = year
+                    # metadata_dict["date_type"] = "str"#
+                    ## "date" kennt die library nicht https://github.com/KristoforMaynard/music-tag/issues/35
+                pass
         # sys.exit()
         if len(audio.shape) == 1:
             audio = np.stack([audio, audio], axis=0)
@@ -777,13 +794,19 @@ def predict_with_model(options):
                         try:
                             f.append_tag(tag, metadata_dict[tag])
                         except:
-                            f[tag] = metadata_dict[tag]
+                            try:
+                                f[tag] = metadata_dict[tag]
+                            except:
+                                print("problem with tag", tag)
+                                pass
 
                 # TXXX:comment fehlt, u.A., das ist hier mit dieser lib nicht schön
                 for tag in metadata.mfile:
                     print("metadata.mfile-tag", tag)
                     if tag == "TXXX:comment":
                         f.append_tag("comment", metadata.mfile[tag])
+                    if tag == "TDRC":
+                        f.mfile[tag] = metadata.mfile[tag]
                     
 
                 f.save()
