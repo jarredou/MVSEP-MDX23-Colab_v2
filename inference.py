@@ -789,20 +789,20 @@ def predict_with_model(options):
                 f.save()
             print('File created: {}'.format(output_folder + '/' + output_name))
 
-        break
-        # instrumental part 1
-        # inst = (audio.T - result['vocals']) # * 1.002
-        inst = result['instrum'] # Adrian: Sonderbehandlung von 'instrum'-Spur, model.instruments beinhält alles außer 'instrum' (warum machen sie es so?)
-        output_name = os.path.splitext(os.path.basename(input_audio))[0] + '_{}.wav'.format('instrum')
-        sf.write(output_folder + '/' + output_name, inst, sr, subtype=output_format)
-        print('File created: {}'.format(output_folder + '/' + output_name))
-        
-        if options['vocals_only'] is False:
-            # instrumental part 2
-            inst2 = (result['bass'] + result['drums'] + result['other']) # 1.004
-            output_name = os.path.splitext(os.path.basename(input_audio))[0] + '_{}.wav'.format('instrum2')
-            sf.write(output_folder + '/' + output_name, inst2, sr, subtype=output_format)
+        if False:
+            # instrumental part 1
+            # inst = (audio.T - result['vocals']) # * 1.002
+            inst = result['instrum'] # Adrian: Sonderbehandlung von 'instrum'-Spur, model.instruments beinhält alles außer 'instrum' (warum machen sie es so?)
+            output_name = os.path.splitext(os.path.basename(input_audio))[0] + '_{}.wav'.format('instrum')
+            sf.write(output_folder + '/' + output_name, inst, sr, subtype=output_format)
             print('File created: {}'.format(output_folder + '/' + output_name))
+            
+            if options['vocals_only'] is False:
+                # instrumental part 2
+                inst2 = (result['bass'] + result['drums'] + result['other']) # 1.004
+                output_name = os.path.splitext(os.path.basename(input_audio))[0] + '_{}.wav'.format('instrum2')
+                sf.write(output_folder + '/' + output_name, inst2, sr, subtype=output_format)
+                print('File created: {}'.format(output_folder + '/' + output_name))
 
 
 # Linkwitz-Riley filter
