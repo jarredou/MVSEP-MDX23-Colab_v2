@@ -717,6 +717,10 @@ def predict_with_model(options):
         print(metadata)
         print(type(metadata))
         print(metadata.tag_map)
+        print("metadata.mfile",metadata.mfile)
+        for tag in metadata.mfile:
+            print("metadata.mfile-tag", tag, metadata.mfile[tag])
+
         metadata_dict = {}
         for possible_tag in metadata.tag_map:
             if possible_tag in metadata:
@@ -726,7 +730,11 @@ def predict_with_model(options):
                     # Tags die mit "#" starten sind bitrate, codec, length, channels, und samplerate - keine expliziten metadaten die wir weiterführen müssen
                     pass
                 else:
-                    metadata_dict[possible_tag] = metadata[possible_tag]
+                    metadata_dict[str(possible_tag)] = metadata[possible_tag]
+                    # print("metadata.tag_map[possible_tag]", metadata.tag_map[possible_tag])
+                    # print("metadata.tag_map[possible_tag] -> ", metadata.tag_map[possible_tag][3])
+                    # print("metadata.tag_map[possible_tag] -> ", "str" if "str" in str(metadata.tag_map[possible_tag][3]) else "int")
+                    metadata_dict[possible_tag+"_type"] = "str" if "str" in str(metadata.tag_map[possible_tag][3]) else "int"
         # sys.exit()
         if len(audio.shape) == 1:
             audio = np.stack([audio, audio], axis=0)
@@ -737,9 +745,47 @@ def predict_with_model(options):
             sf.write(output_folder + '/' + output_name, result[instrum], sample_rates[instrum], subtype=output_format)
             if (metadata_dict):
                 f = music_tag.load_file(output_folder + '/' + output_name)
+                # print("f.mfile",f.mfile)
+                # f.mfile = metadata.mfile
+                # print("f.mfile",f.mfile)
+                # metadata_dict_2 = {}
+                # for possible_tag in f.tag_map:
+                #     if possible_tag in f:
+                #         print(possible_tag + ": ", end="")
+                #         print(f[possible_tag])
+                #         if possible_tag.startswith("#"):
+                #             # Tags die mit "#" starten sind bitrate, codec, length, channels, und samplerate - keine expliziten metadaten die wir weiterführen müssen
+                #             pass
+                #         else:
+                #             metadata_dict_2[str(possible_tag)] = f[possible_tag]
+                #             # print("metadata.tag_map[possible_tag]", metadata.tag_map[possible_tag])
+                #             # print("metadata.tag_map[possible_tag] -> ", metadata.tag_map[possible_tag][3])
+                #             # print("metadata.tag_map[possible_tag] -> ", "str" if "str" in str(metadata.tag_map[possible_tag][3]) else "int")
+                #             metadata_dict_2[possible_tag+"_type"] = "str" if "str" in str(f.tag_map[possible_tag][3]) else "int"
+
+                # _______
+
+
+                print("f", f)
+                f["totaltracks"] = None # totaltracks war irgendwie immer default auf 0 (wegen "type normalization" vielleicht, siehe README) - so wird totaltracks richtig gesetzt und bleibt sonst leer, wie gewünscht
                 for tag in metadata_dict:
-                    # f[tag] = metadata_dict[tag]
-                    f.append_tag(tag, metadata_dict[tag])
+                    if not tag[::-1].startswith("epyt_"):
+                        print("tag",tag)
+                        print("metadata_dict[tag]", metadata_dict[tag])
+                        # f[tag] = "" if metadata_dict[tag+"_type"] == "str" else 0
+                        # f.remove_tag(tag)
+                        try:
+                            f.append_tag(tag, metadata_dict[tag])
+                        except:
+                            f[tag] = metadata_dict[tag]
+
+                # TXXX:comment fehlt, u.A., das ist hier mit dieser lib nicht schön
+                for tag in metadata.mfile:
+                    print("metadata.mfile-tag", tag)
+                    if tag == "TXXX:comment":
+                        f.append_tag("comment", metadata.mfile[tag])
+                    
+
                 f.save()
             print('File created: {}'.format(output_folder + '/' + output_name))
 
