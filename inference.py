@@ -36,6 +36,9 @@ from modules.tfc_tdf_v3 import TFC_TDF_net, STFT
 from scipy.signal import resample_poly
 from modules.segm_models import Segm_Models_Net
 
+# DL4AD
+import music_tag # für lesen und schreiben von metadaten
+
 
 class Conv_TDF_net_trim_model(nn.Module):
     def __init__(self, device, target_name, L, n_fft, hop=1024):
@@ -709,6 +712,22 @@ def predict_with_model(options):
     for i, input_audio in enumerate(options['input_audio']):
         print('Go for: {}'.format(input_audio))
         audio, sr = librosa.load(input_audio, mono=False, sr=44100)
+        metadata = music_tag.load_file(input_audio)
+        print("metadata")
+        print(metadata)
+        print(type(metadata))
+        print(metadata.tag_map)
+        metadata_dict = {}
+        for possible_tag in metadata.tag_map:
+            if possible_tag in metadata:
+                print(possible_tag + ": ", end="")
+                print(metadata[possible_tag])
+                if possible_tag.startswith("#"):
+                    # Tags die mit "#" starten sind bitrate, codec, length, channels, und samplerate - keine expliziten metadaten die wir weiterführen müssen
+                    pass
+                else:
+                    metadata_dict[possible_tag] = metadata[possible_tag]
+        # sys.exit()
         if len(audio.shape) == 1:
             audio = np.stack([audio, audio], axis=0)
         print("Input audio: {} Sample rate: {}".format(audio.shape, sr))
@@ -716,11 +735,18 @@ def predict_with_model(options):
         for instrum in model.instruments:
             output_name = os.path.splitext(os.path.basename(input_audio))[0] + '_{}.wav'.format(instrum)
             sf.write(output_folder + '/' + output_name, result[instrum], sample_rates[instrum], subtype=output_format)
+            if (metadata_dict):
+                f = music_tag.load_file(output_folder + '/' + output_name)
+                for tag in metadata_dict:
+                    # f[tag] = metadata_dict[tag]
+                    f.append_tag(tag, metadata_dict[tag])
+                f.save()
             print('File created: {}'.format(output_folder + '/' + output_name))
 
+        break
         # instrumental part 1
         # inst = (audio.T - result['vocals']) # * 1.002
-        inst = result['instrum']
+        inst = result['instrum'] # Adrian: Sonderbehandlung von 'instrum'-Spur, model.instruments beinhält alles außer 'instrum' (warum machen sie es so?)
         output_name = os.path.splitext(os.path.basename(input_audio))[0] + '_{}.wav'.format('instrum')
         sf.write(output_folder + '/' + output_name, inst, sr, subtype=output_format)
         print('File created: {}'.format(output_folder + '/' + output_name))
