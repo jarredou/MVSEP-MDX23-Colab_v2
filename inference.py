@@ -740,17 +740,18 @@ def predict_with_model(options):
             except:
                 print("problem with metadata, with year specifically, need to solve later")
                 if possible_tag == "year":
-                    print("year is supposed to be")
-                    # print(metadata.mfile["TXXX:TDAT"])
-                    # print(type(metadata.mfile["TXXX:TDAT"]))
-                    year_string = str(metadata.mfile["TXXX:TDAT"])
-                    # year_date = dateutil.parser.parse(year_string).date()
-                    year = str(dateutil.parser.parse(year_string).year)
-                    metadata_dict["year"] = year
-                    metadata_dict["year_type"] = "str"
-                    # metadata_dict["date"] = year
-                    # metadata_dict["date_type"] = "str"#
-                    ## "date" kennt die library nicht https://github.com/KristoforMaynard/music-tag/issues/35
+                    if "TXXX:TDAT" in metadata.mfile:
+                        print("year is supposed to be")
+                        # print(metadata.mfile["TXXX:TDAT"])
+                        # print(type(metadata.mfile["TXXX:TDAT"]))
+                        year_string = str(metadata.mfile["TXXX:TDAT"])
+                        # year_date = dateutil.parser.parse(year_string).date()
+                        year = str(dateutil.parser.parse(year_string).year)
+                        metadata_dict["year"] = year
+                        metadata_dict["year_type"] = "str"
+                        # metadata_dict["date"] = year
+                        # metadata_dict["date_type"] = "str"#
+                        ## "date" kennt die library nicht https://github.com/KristoforMaynard/music-tag/issues/35
                 pass
         # sys.exit()
         if len(audio.shape) == 1:
