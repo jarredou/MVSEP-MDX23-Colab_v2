@@ -713,105 +713,108 @@ def predict_with_model(options):
 
     for i, input_audio in enumerate(options['input_audio']):
         print('Go for: {}'.format(input_audio))
-        audio, sr = librosa.load(input_audio, mono=False, sr=44100)
-        metadata = music_tag.load_file(input_audio)
-        print("metadata")
-        # print(metadata)
-        # print(type(metadata))
-        print(metadata.tag_map)
-        print("metadata.mfile",metadata.mfile)
-        for tag in metadata.mfile:
-            print("metadata.mfile-tag", tag, metadata.mfile[tag])
+        try:
+            audio, sr = librosa.load(input_audio, mono=False, sr=44100)
+            metadata = music_tag.load_file(input_audio)
+            # print("metadata")
+            # print(metadata)
+            # print(type(metadata))
+            # print(metadata.tag_map)
+            # print("metadata.mfile",metadata.mfile)
+            # for tag in metadata.mfile:
+                # print("metadata.mfile-tag", tag, metadata.mfile[tag])
 
-        metadata_dict = {}
-        for possible_tag in metadata.tag_map:
-            try:
-                print(possible_tag + ": ", end="")
-                print(metadata[possible_tag])
-                if possible_tag.startswith("#"):
-                    # Tags die mit "#" starten sind bitrate, codec, length, channels, und samplerate - keine expliziten metadaten die wir weiterführen müssen
+            metadata_dict = {}
+            for possible_tag in metadata.tag_map:
+                try:
+                    print(possible_tag + ": ", end="")
+                    print(metadata[possible_tag])
+                    if possible_tag.startswith("#"):
+                        # Tags die mit "#" starten sind bitrate, codec, length, channels, und samplerate - keine expliziten metadaten die wir weiterführen müssen
+                        pass
+                    else:
+                        metadata_dict[str(possible_tag)] = metadata[possible_tag]
+                        # print("metadata.tag_map[possible_tag]", metadata.tag_map[possible_tag])
+                        # print("metadata.tag_map[possible_tag] -> ", metadata.tag_map[possible_tag][3])
+                        # print("metadata.tag_map[possible_tag] -> ", "str" if "str" in str(metadata.tag_map[possible_tag][3]) else "int")
+                        metadata_dict[possible_tag+"_type"] = "str" if "str" in str(metadata.tag_map[possible_tag][3]) else "int"
+                except:
+                    # print("problem with metadata, with year specifically, need to solve later")
+                    if possible_tag == "year":
+                        if "TXXX:TDAT" in metadata.mfile:
+                            # print("year is supposed to be")
+                            # print(metadata.mfile["TXXX:TDAT"])
+                            # print(type(metadata.mfile["TXXX:TDAT"]))
+                            year_string = str(metadata.mfile["TXXX:TDAT"])
+                            # year_date = dateutil.parser.parse(year_string).date()
+                            year = str(dateutil.parser.parse(year_string).year)
+                            metadata_dict["year"] = year
+                            metadata_dict["year_type"] = "str"
+                            # metadata_dict["date"] = year
+                            # metadata_dict["date_type"] = "str"#
+                            ## "date" kennt die library nicht https://github.com/KristoforMaynard/music-tag/issues/35
                     pass
-                else:
-                    metadata_dict[str(possible_tag)] = metadata[possible_tag]
-                    # print("metadata.tag_map[possible_tag]", metadata.tag_map[possible_tag])
-                    # print("metadata.tag_map[possible_tag] -> ", metadata.tag_map[possible_tag][3])
-                    # print("metadata.tag_map[possible_tag] -> ", "str" if "str" in str(metadata.tag_map[possible_tag][3]) else "int")
-                    metadata_dict[possible_tag+"_type"] = "str" if "str" in str(metadata.tag_map[possible_tag][3]) else "int"
-            except:
-                print("problem with metadata, with year specifically, need to solve later")
-                if possible_tag == "year":
-                    if "TXXX:TDAT" in metadata.mfile:
-                        print("year is supposed to be")
-                        # print(metadata.mfile["TXXX:TDAT"])
-                        # print(type(metadata.mfile["TXXX:TDAT"]))
-                        year_string = str(metadata.mfile["TXXX:TDAT"])
-                        # year_date = dateutil.parser.parse(year_string).date()
-                        year = str(dateutil.parser.parse(year_string).year)
-                        metadata_dict["year"] = year
-                        metadata_dict["year_type"] = "str"
-                        # metadata_dict["date"] = year
-                        # metadata_dict["date_type"] = "str"#
-                        ## "date" kennt die library nicht https://github.com/KristoforMaynard/music-tag/issues/35
-                pass
-        # sys.exit()
-        if len(audio.shape) == 1:
-            audio = np.stack([audio, audio], axis=0)
-        print("Input audio: {} Sample rate: {}".format(audio.shape, sr))
-        result, sample_rates = model.separate_music_file(audio.T, sr, i, len(options['input_audio']))
-        for instrum in model.instruments:
-            output_name = os.path.splitext(os.path.basename(input_audio))[0] + '_{}.wav'.format(instrum)
-            sf.write(output_folder + '/' + output_name, result[instrum], sample_rates[instrum], subtype=output_format)
-            if (metadata_dict):
-                f = music_tag.load_file(output_folder + '/' + output_name)
-                # print("f.mfile",f.mfile)
-                # f.mfile = metadata.mfile
-                # print("f.mfile",f.mfile)
-                # metadata_dict_2 = {}
-                # for possible_tag in f.tag_map:
-                #     if possible_tag in f:
-                #         print(possible_tag + ": ", end="")
-                #         print(f[possible_tag])
-                #         if possible_tag.startswith("#"):
-                #             # Tags die mit "#" starten sind bitrate, codec, length, channels, und samplerate - keine expliziten metadaten die wir weiterführen müssen
-                #             pass
-                #         else:
-                #             metadata_dict_2[str(possible_tag)] = f[possible_tag]
-                #             # print("metadata.tag_map[possible_tag]", metadata.tag_map[possible_tag])
-                #             # print("metadata.tag_map[possible_tag] -> ", metadata.tag_map[possible_tag][3])
-                #             # print("metadata.tag_map[possible_tag] -> ", "str" if "str" in str(metadata.tag_map[possible_tag][3]) else "int")
-                #             metadata_dict_2[possible_tag+"_type"] = "str" if "str" in str(f.tag_map[possible_tag][3]) else "int"
+            # sys.exit()
+            if len(audio.shape) == 1:
+                audio = np.stack([audio, audio], axis=0)
+            print("Input audio: {} Sample rate: {}".format(audio.shape, sr))
+            result, sample_rates = model.separate_music_file(audio.T, sr, i, len(options['input_audio']))
+            for instrum in model.instruments:
+                output_name = os.path.splitext(os.path.basename(input_audio))[0] + '_{}.wav'.format(instrum)
+                sf.write(output_folder + '/' + output_name, result[instrum], sample_rates[instrum], subtype=output_format)
+                if (metadata_dict):
+                    f = music_tag.load_file(output_folder + '/' + output_name)
+                    # print("f.mfile",f.mfile)
+                    # f.mfile = metadata.mfile
+                    # print("f.mfile",f.mfile)
+                    # metadata_dict_2 = {}
+                    # for possible_tag in f.tag_map:
+                    #     if possible_tag in f:
+                    #         print(possible_tag + ": ", end="")
+                    #         print(f[possible_tag])
+                    #         if possible_tag.startswith("#"):
+                    #             # Tags die mit "#" starten sind bitrate, codec, length, channels, und samplerate - keine expliziten metadaten die wir weiterführen müssen
+                    #             pass
+                    #         else:
+                    #             metadata_dict_2[str(possible_tag)] = f[possible_tag]
+                    #             # print("metadata.tag_map[possible_tag]", metadata.tag_map[possible_tag])
+                    #             # print("metadata.tag_map[possible_tag] -> ", metadata.tag_map[possible_tag][3])
+                    #             # print("metadata.tag_map[possible_tag] -> ", "str" if "str" in str(metadata.tag_map[possible_tag][3]) else "int")
+                    #             metadata_dict_2[possible_tag+"_type"] = "str" if "str" in str(f.tag_map[possible_tag][3]) else "int"
 
-                # _______
+                    # _______
 
 
-                print("f", f)
-                f["totaltracks"] = None # totaltracks war irgendwie immer default auf 0 (wegen "type normalization" vielleicht, siehe README) - so wird totaltracks richtig gesetzt und bleibt sonst leer, wie gewünscht
-                for tag in metadata_dict:
-                    if not tag[::-1].startswith("epyt_"):
-                        print("tag",tag)
-                        print("metadata_dict[tag]", metadata_dict[tag])
-                        # f[tag] = "" if metadata_dict[tag+"_type"] == "str" else 0
-                        # f.remove_tag(tag)
-                        try:
-                            f.append_tag(tag, metadata_dict[tag])
-                        except:
+                    # print("f", f)
+                    f["totaltracks"] = None # totaltracks war irgendwie immer default auf 0 (wegen "type normalization" vielleicht, siehe README) - so wird totaltracks richtig gesetzt und bleibt sonst leer, wie gewünscht
+                    for tag in metadata_dict:
+                        if not tag[::-1].startswith("epyt_"):
+                            # print("tag",tag)
+                            # print("metadata_dict[tag]", metadata_dict[tag])
+                            # f[tag] = "" if metadata_dict[tag+"_type"] == "str" else 0
+                            # f.remove_tag(tag)
                             try:
-                                f[tag] = metadata_dict[tag]
+                                f.append_tag(tag, metadata_dict[tag])
                             except:
-                                print("problem with tag", tag)
-                                pass
+                                try:
+                                    f[tag] = metadata_dict[tag]
+                                except:
+                                    print("problem with tag", tag)
+                                    pass
 
-                # TXXX:comment fehlt, u.A., das ist hier mit dieser lib nicht schön
-                for tag in metadata.mfile:
-                    print("metadata.mfile-tag", tag)
-                    if tag == "TXXX:comment":
-                        f.append_tag("comment", metadata.mfile[tag])
-                    if tag == "TDRC":
-                        f.mfile[tag] = metadata.mfile[tag]
-                    
+                    # TXXX:comment fehlt, u.A., das ist hier mit dieser lib nicht schön
+                    for tag in metadata.mfile:
+                        # print("metadata.mfile-tag", tag)
+                        if tag == "TXXX:comment":
+                            f.append_tag("comment", metadata.mfile[tag])
+                        if tag == "TDRC":
+                            f.mfile[tag] = metadata.mfile[tag]
+                        
 
-                f.save()
-            print('File created: {}'.format(output_folder + '/' + output_name))
+                    f.save()
+                print('File created: {}'.format(output_folder + '/' + output_name))
+        except:
+            print("File could not be loaded (Check the file): ", input_audio)
 
         if False:
             # instrumental part 1
