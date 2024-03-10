@@ -5,7 +5,7 @@ if __name__ == '__main__':
      
     gpu_use = "0"
 
-    print('GPU use: {}'.format(gpu_use))
+    # print('GPU use: {}'.format(gpu_use)) # not sure why this whole block is here at all
     os.environ["CUDA_VISIBLE_DEVICES"] = "{}".format(gpu_use)
 import warnings
 warnings.filterwarnings("ignore")
@@ -40,7 +40,9 @@ from modules.segm_models import Segm_Models_Net
 import music_tag # für lesen und schreiben von metadaten
 from datetime import datetime
 import dateutil.parser
-
+from functools import singledispatch # für main-methoden
+## globals
+options = {} # für call von main von außerhalb (muss dann global sein)
 
 class Conv_TDF_net_trim_model(nn.Module):
     def __init__(self, device, target_name, L, n_fft, hop=1024):
@@ -700,6 +702,21 @@ def predict_with_model(options):
 
     output_format = options['output_format']
 
+    # expanding input paths that contain wildcards "*", which is done in linux shell automatically but not in powershell
+    input_paths = options['input_audio'].copy()
+    for i, input_path in enumerate(input_paths):
+        if input_path.endswith("*"):
+            input_path_clean = input_path.replace("*","")
+            expanded_path = []
+            for file in os.listdir(input_path_clean):
+                if os.path.isfile(os.path.join(input_path_clean,file)):
+                    expanded_path.append(os.path.join(input_path_clean,file))
+            options['input_audio'][i] = expanded_path[0]
+            if len(expanded_path) > 1:
+                for element in expanded_path[1:]:
+                    options['input_audio'].append(element)
+
+
     for input_audio in options['input_audio']:
         if not os.path.isfile(input_audio):
             print('Error. No such file: {}. Please check path!'.format(input_audio))
@@ -869,10 +886,14 @@ def match_array_shapes(array_1:np.ndarray, array_2:np.ndarray):
         array_1 = np.pad(array_1, ((0,0), (0,padding)), 'constant', constant_values=0)
     return array_1
 
-if __name__ == '__main__':
-    start_time = time()
-    print("started!\n")
-    m = argparse.ArgumentParser()
+
+@singledispatch
+def main(m):
+    pass
+
+@main.register(argparse.ArgumentParser)
+def _(m):
+    global options
     m.add_argument("--input_audio", "-i", nargs='+', type=str, help="Input audio location. You can provide multiple files at once", required=True)
     m.add_argument("--output_folder", "-r", type=str, help="Output audio folder", required=True)
     m.add_argument("--cpu", action='store_true', help="Choose CPU instead of GPU for processing. Can be very slow.")
@@ -914,4 +935,17 @@ if __name__ == '__main__':
     print(f'output_format: {options["output_format"]}\n')
     predict_with_model(options)
     print('Time: {:.0f} sec'.format(time() - start_time))
-    
+
+@main.register(dict)
+def _(m):
+    global options
+    options = m
+    print("options",options)
+    predict_with_model(options)
+
+if __name__ == '__main__':
+    start_time = time()
+    print("started!\n")
+    m = argparse.ArgumentParser()
+    print(type(m) == argparse.ArgumentParser)
+    main(m)

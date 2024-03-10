@@ -1,2 +1,4 @@
 models/*
 */__pycache__/
+_input/*
+_output/*
